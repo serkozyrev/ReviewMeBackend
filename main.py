@@ -9,8 +9,7 @@ from database import CursorFromConnectionFromPool
 from flask_cors import CORS, cross_origin
 import bcrypt
 
-my_email = 'sergey.kozyrev111@gmail.com'
-gmail_password = 'Asentia1990!'
+
 app = Flask(__name__)
 CORS(app)
 API_KEY='AIzaSyBr5i-EW96EsIqQov2lrAPbSz82M_wJsAg'
