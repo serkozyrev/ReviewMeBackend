@@ -1,25 +1,32 @@
 from flask import Flask, request, jsonify
 import jwt
+import os
 from datetime import datetime, timedelta
 import requests
 import smtplib
 from random import *
+from dotenv import load_dotenv
 from database import Database
 from database import CursorFromConnectionFromPool
 from flask_cors import CORS, cross_origin
 import bcrypt
 
-my_email = 'sergey.kozyrev111@gmail.com'
-gmail_password = 'Asentia1990!'
+load_dotenv()
+my_email = os.getenv('email')
+gmail_password = os.getenv('gmail_password')
+DB_PWD = os.getenv('DB_PWD')
+DB_USER = os.getenv('DB_USER')
+DB_HOST = os.getenv('DB_HOST')
+jwtsecret = os.getenv('jwtsecret')
+API_KEY = os.getenv('API_KEY')
+DB = os.getenv('DB')
 app = Flask(__name__)
 CORS(app)
-API_KEY='AIzaSyBr5i-EW96EsIqQov2lrAPbSz82M_wJsAg'
-app.config["JWT_SECRET_KEY"] = "reviewme2021"
-Database.initialize(user='fqlrgwscuwenul',
-                                            password='2742fbeb78fae609caa529ef9a535e7a96ee63307c892425d3be0ec4dd642b2e',
-                                            host='ec2-34-193-112-164.compute-1.amazonaws.com',
+Database.initialize(user=f'{DB_USER}',
+                                            password=f'{DB_PWD}',
+                                            host=f'{DB_HOST}',
                                             port=5432,
-                                            database='d76ift8mja0jq')
+                                            database=f'{DB}')
 
 @app.route('/reset-pass', methods=['PUT'])
 @cross_origin()
@@ -27,7 +34,7 @@ def reset_password():
     token_info = request.json['tokenInfo']
     password = request.json['password'].encode('utf8')
     current_pass = request.json['currentPass'].encode('utf-8')
-    decoded_token = jwt.decode(token_info, app.config["JWT_SECRET_KEY"], algorithms=["HS256"])
+    decoded_token = jwt.decode(token_info, jwtsecret, algorithms=["HS256"])
 
     user_id=list(decoded_token.items())[2][1]
     with CursorFromConnectionFromPool() as cursor:
@@ -459,7 +466,7 @@ def login():
             'iat': datetime.now(),
             'id': user_id
         }
-        access_token = jwt.encode(payload, app.config["JWT_SECRET_KEY"], algorithm="HS256")
+        access_token = jwt.encode(payload, jwtsecret, algorithm="HS256")
 
         return {'users': user_data, 'password': valid_password, 'details': user_details, 'tokenInfo': access_token}
 
@@ -487,6 +494,7 @@ def forgot_password():
         password_numbers = [choice(numbers) for _ in range(randint(2, 4))]
         password_list = password_letters + password_numbers + password_symbols
         shuffle(password_list)
+
 
         password = "".join(password_list).encode('utf8')
         pass_decoded=password.decode('utf8')
