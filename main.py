@@ -2,12 +2,15 @@ from flask import Flask, request, jsonify
 import jwt
 from datetime import datetime, timedelta
 import requests
+import smtplib
+from random import *
 from database import Database
 from database import CursorFromConnectionFromPool
 from flask_cors import CORS, cross_origin
 import bcrypt
 
-
+my_email = 'sergey.kozyrev111@gmail.com'
+gmail_password = 'Asentia1990!'
 app = Flask(__name__)
 CORS(app)
 API_KEY='AIzaSyBr5i-EW96EsIqQov2lrAPbSz82M_wJsAg'
@@ -460,7 +463,50 @@ def login():
 
         return {'users': user_data, 'password': valid_password, 'details': user_details, 'tokenInfo': access_token}
 
+@app.route('/auth/forgotpass', methods=['POST'])
+@cross_origin()
+def forgot_password():
+    forgot_password_email= request.json['email']
+    print(forgot_password_email)
+    with CursorFromConnectionFromPool() as cursor:
+        cursor.execute(f'select password from usr where email = %s', (forgot_password_email, ))
+        email=cursor.fetchone()
+    if email is None:
+        return jsonify("Please provide email that you use to login to your account!")
+    else:
+        letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't',
+                   'u',
+                   'v', 'w', 'x', 'y', 'z', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+                   'P',
+                   'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
+        numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+        symbols = ['!', '#', '$', '%', '&', '(', ')', '*', '+']
 
+        password_letters = [choice(letters) for _ in range(randint(8, 10))]
+        password_symbols = [choice(symbols) for _ in range(randint(2, 4))]
+        password_numbers = [choice(numbers) for _ in range(randint(2, 4))]
+        password_list = password_letters + password_numbers + password_symbols
+        shuffle(password_list)
+
+        password = "".join(password_list).encode('utf8')
+        pass_decoded=password.decode('utf8')
+        print(pass_decoded)
+        salt = bcrypt.gensalt(10)
+        hashed_pass = bcrypt.hashpw(password, salt).decode('utf-8')
+        print(hashed_pass)
+        with CursorFromConnectionFromPool() as cursor_update:
+            cursor_update.execute(f"UPDATE usr SET password=%s "
+                                f" WHERE email=%s", (hashed_pass, forgot_password_email))
+        with smtplib.SMTP("smtp.gmail.com") as connection:
+            connection.starttls()
+            connection.login(user=my_email, password=gmail_password)
+            connection.sendmail(
+                from_addr=my_email,
+                to_addrs=forgot_password_email,
+                msg=f"Subject:Temporary password for account with email {forgot_password_email} on website 'ReviewMe'"
+                    f"\n\n Hello, \n Here is your generated password to login to your account: \n {pass_decoded}"
+            )
+        return jsonify('Email with new password was sent to you')
 @app.route('/auth/signup', methods=['POST'])
 @cross_origin()
 def sign():
