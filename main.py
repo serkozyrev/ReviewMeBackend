@@ -10,6 +10,7 @@ from database import Database
 from database import CursorFromConnectionFromPool
 from flask_cors import CORS, cross_origin
 import bcrypt
+from wishlist_item import all_wishlist_item, wishlist_item_by_id, wishlist_item_add
 
 load_dotenv()
 my_email = os.getenv('email')
@@ -52,30 +53,18 @@ def reset_password():
             return jsonify('Password successfully updated')
 
 
-
 @app.route('/wishlist-item', methods=['GET'])
 @cross_origin()
 def get_all_wishlist():
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute('select * from wishlist')
-        wishlist_data = cursor.fetchall()
-        return{'wishlist':wishlist_data}
+    response=all_wishlist_item()
+    return jsonify(response)
 
 
 @app.route('/wishlist-item/<string:userId>', methods=['GET'])
 @cross_origin()
 def get_wishlist_by_userid(userId):
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute(f"SELECT * FROM wishlist WHERE userid=%s", (userId, ))
-        wishlist_by_user = cursor.fetchall()
-        wishlist_list = []
-        for i in range(len(wishlist_by_user)):
-            wishlist_element={ 'wishlistid': wishlist_by_user[i][0],
-                'bookcover': wishlist_by_user[i][3], 'booktitle': wishlist_by_user[i][2],
-                'bookid': wishlist_by_user[i][4], 'author':wishlist_by_user[i][5]
-            }
-            wishlist_list.append(wishlist_element)
-        return{'wish_list': wishlist_list}
+    response = wishlist_item_by_id(userId)
+    return jsonify(response)
 
 
 @app.route('/wishlist-item/add', methods=['POST'])
@@ -86,18 +75,19 @@ def add_wishlist():
     book_cover = request.json['bookcover']
     book_id = request.json['bookId']
     author = request.json['author'].replace("'", "''")
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute(f"INSERT INTO wishlist(userid, booktitle, bookcover, bookid, author)  "
-                       f"VALUES(%s, %s, %s, %s, %s)", (user_id, book_title, book_cover, book_id, author))
-        return{'message':'Add wishlist item successfully'}
+    response = wishlist_item_add(user_id, book_title, book_cover, book_id, author)
+    return jsonify(response)
 
 
 @app.route('/wishlist-item/delete/<string:id>', methods=['DELETE'])
 @cross_origin()
 def delete_wishlist_by_id(id):
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute(f'delete from wishlist where wishlistid in (%s)', (id, ))
-        return {'message': 'Delete wishlist item successful'}
+    try:
+        with CursorFromConnectionFromPool() as cursor:
+            cursor.execute(f'delete from wishlist where wishlistid in (%s)', (id, ))
+            return {'message': 'Delete wishlist item successful'}
+    except:
+        return{'message': 'Deleting wishlist item failed'}
 
 
 @app.route('/user-profile', methods=['GET'])
