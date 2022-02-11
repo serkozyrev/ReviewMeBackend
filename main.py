@@ -12,6 +12,10 @@ from flask_cors import CORS, cross_origin
 import bcrypt
 from controllers.wishlist_item import all_wishlist_item, wishlist_item_by_id, wishlist_item_add
 from controllers.user_profile import user_profile_all, profile_by_id,profile_edit
+from controllers.review import all_reviews, review_by_id, review_by_review_id, review_adding,review_editing
+from controllers.reports import all_reports, report_by_id, report_by_review_id, report_adding, report_keeping,report_deletion
+
+
 
 load_dotenv()
 my_email = os.getenv('email')
@@ -133,40 +137,22 @@ def delete_account_profile():
 @app.route('/reviews', methods=['GET'])
 @cross_origin()
 def get_all_reviews():
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute('SELECT * FROM review INNER JOIN usr ON review.userid=usr.userid')
-        reviews_data = cursor.fetchall()
-        return {'reviews':reviews_data}
+    response = all_reviews()
+    return jsonify(response)
 
 
 @app.route('/reviews/<string:bookId>', methods=['GET'])
 @cross_origin()
 def get_reviews_by_book_id(bookId):
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute(f"SELECT * FROM review r INNER JOIN userdetails u ON r.userid=u.userid WHERE r.bookid=%s"
-                       f" AND isActive=true ORDER BY updatedate DESC", (bookId, ))
-        reviews_by_book = cursor.fetchall()
-        review_list = []
-        for i in range(len(reviews_by_book)):
-            date=datetime.strftime(reviews_by_book[i][2], '%a, %d %b %Y')
-            review_element={
-                'reviewid': reviews_by_book[i][0], 'updatedate': date, 'comment': reviews_by_book[i][3],
-                'rating': reviews_by_book[i][4], 'userid': reviews_by_book[i][5], 'bookid': reviews_by_book[i][6],
-                'isactive': reviews_by_book[i][7], 'nickname': reviews_by_book[i][11]
-            }
-            review_list.append(review_element)
-        return {'review_list': review_list}
+    response = review_by_id(bookId)
+    return jsonify(response)
 
 
 @app.route('/reviews/<string:reviewId>', methods=['GET'])
 @cross_origin()
 def get_review_by_review_id(reviewId):
-    review_id=request.json['']
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute(f"SELECT * FROM review r INNER JOIN userdetails u ON r.userid=u.userid "
-                       f"WHERE r.reviewid=%s AND isActive=true", (reviewId, ))
-        reviews_by_id = cursor.fetchall()
-        return{'reviews_by_id': reviews_by_id}
+    response = review_by_review_id(reviewId)
+    return jsonify(response)
 
 
 @app.route('/reviews/add', methods=['POST'])
@@ -179,16 +165,13 @@ def add_review():
     date = f'{year}-{month}-{day}'
     comment = request.json['comment']
     rating = request.json['rating']
-    userId=request.json['userId']
-    bookId=request.json['bookId']
-    if date is None or comment is None or rating is None or userId is None or bookId is None:
+    user_id=request.json['userId']
+    book_id=request.json['bookId']
+    if date is None or comment is None or rating is None or user_id is None or book_id is None:
         return {'message': 'Add Review Fail'}
     else:
-        with CursorFromConnectionFromPool() as cursor:
-            cursor.execute(f"INSERT INTO review (createdate, updatedate, comment, rating, userid, bookid, isactive) "
-                           f"VALUES(CAST(%s AS date), CAST(%s AS date), "
-                           f"%s, %s, %s, %s, true)", (date, date, comment, rating, userId, bookId))
-            return {'message': 'Add review success'}
+        response = review_adding(date, date, comment, rating, user_id, book_id)
+        return jsonify(response)
 
 
 @app.route('/reviews/edit', methods=['PUT'])
@@ -205,10 +188,8 @@ def edit_review():
     if date is None or comment is None or rating is None or reviewId is None:
         return {'message': 'Edit Review Fail'}
     else:
-        with CursorFromConnectionFromPool() as cursor:
-            cursor.execute(f"UPDATE review SET comment=%s, rating=%s,"
-                           f" updatedate= CAST(%s AS date) WHERE reviewid=%s", (comment, rating, date, reviewId))
-            return {'message': 'edit review success'}
+        response = review_editing(comment, rating, date, reviewId)
+        return jsonify(response)
 
 
 @app.route('/reviews/delete', methods=['PUT'])
@@ -226,47 +207,22 @@ def delete_review():
 @app.route('/reports', methods=['GET'])
 @cross_origin()
 def get_all_reports():
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute("SELECT r.reportid, r.reviewid, r.reporttypeid, r.comment, rw.comment,"
-                       " rt.reporttype, rd.firstname ||' '|| rd.lastname,"
-                       " rwd.firstname ||' '|| rwd.lastname,"
-                       " rd.userid, "
-                       " rwd.userid"
-                       " FROM report r "
-                       " INNER JOIN reporttype rt ON r.reporttypeid=rt.reporttypeid "
-                       " INNER JOIN userdetails rd ON rd.userid=r.userid "
-                       " INNER JOIN review rw ON rw.reviewid=r.reviewid "
-                       " LEFT JOIN userdetails rwd ON rwd.userid=rw.userid "
-                       " WHERE r.isactive=true")
-        report_data = cursor.fetchall()
-        report_list = []
-        for i in range(len(report_data)):
-            review_el={
-                'reportid':report_data[i][0], 'reviewid':report_data[i][1], 'reportComment': report_data[i][3],
-                'reviewComment':report_data[i][4], 'reporterName':report_data[i][6], 'reviewerName': report_data[i][7]
-            }
-            report_list.append(review_el)
-        return {'reports': report_list}
+    response = all_reports()
+    return jsonify(response)
 
 
 @app.route('/reports/<string:reportId>', methods=['GET'])
 @cross_origin()
 def get_report_by_report_id(reportId):
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute(f"select * from report r inner join reporttype rt on r.reporttypeid=rt.reporttypeid where"
-                       f" r.reportid=%s and isActive=true", (reportId, ))
-        report_data_by_id = cursor.fetchall()
-        return {'reportsById': report_data_by_id}
+    response = report_by_id(reportId)
+    return jsonify(response)
 
 
 @app.route('/report/<string:reviewId>', methods=['GET'])
 @cross_origin()
 def get_report_by_review_id(reviewId):
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute(f"SELECT * FROM report WHERE reviewid=%s AND isActive=true", (reviewId, ))
-        report_by_review_id = cursor.fetchall()
-        return{'report_by_review': report_by_review_id}
-
+    response = report_by_review_id(reviewId)
+    return jsonify(response)
 
 @app.route('/reports/add', methods=['POST'])
 @cross_origin()
@@ -283,11 +239,8 @@ def add_report():
     if date is None or comment is None or reporttypeId is None or userId is None or reviewId is None:
         return {'message': 'Add Report Fail'}
     else:
-        with CursorFromConnectionFromPool() as cursor:
-            cursor.execute(f"INSERT INTO report (userid, reviewid, createdate, updatedate, comment, reporttypeid, isactive)"
-                           f" VALUES(%s, %s, CAST(%s AS date),"
-                           f" CAST(%s AS date), %s, %s, true)", (userId, reviewId, date, date, comment, reporttypeId))
-            return {'message': "Add report successful"}
+        response = report_adding(userId, reviewId, date, date, comment, reporttypeId)
+        return jsonify(response)
 
 
 @app.route('/reports/delete', methods=['POST'])
@@ -298,13 +251,8 @@ def delete_report():
     if review_id is None or report_id is None:
         return {'message':'Delete Report failed'}
     else:
-        with CursorFromConnectionFromPool() as cursor:
-            cursor.execute(f"WITH rp AS (UPDATE report SET isactive = false WHERE reportid=%s RETURNING *)"
-                           f" UPDATE review rw"
-                           f" SET isactive = false"
-                           f" FROM rp"
-                           f" WHERE rw.reviewid=%s", (report_id, review_id))
-            return{'message':'Delete Report Successful'}
+        response = report_deletion(report_id, review_id)
+        return jsonify(response)
 
 
 @app.route('/reports/keep', methods=['POST'])
@@ -314,9 +262,9 @@ def keep_report():
     if report_id is None:
         return{'message': 'Keep report failed'}
     else:
-        with CursorFromConnectionFromPool() as cursor:
-            cursor.execute(f"UPDATE report SET isactive = false WHERE reportid = %s", (report_id, ))
-            return {'message': 'Keep report successful'}
+        response = report_keeping(report_id)
+        return jsonify(response)
+
 
 
 @app.route('/library-item', methods=['GET'])
