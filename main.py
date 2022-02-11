@@ -14,7 +14,7 @@ from controllers.wishlist_item import all_wishlist_item, wishlist_item_by_id, wi
 from controllers.user_profile import user_profile_all, profile_by_id,profile_edit
 from controllers.review import all_reviews, review_by_id, review_by_review_id, review_adding,review_editing
 from controllers.reports import all_reports, report_by_id, report_by_review_id, report_adding, report_keeping,report_deletion
-
+from controllers.libraries import all_libraries,all_library_by_id, library_item_deletion,library_item_adding
 
 
 load_dotenv()
@@ -270,45 +270,22 @@ def keep_report():
 @app.route('/library-item', methods=['GET'])
 @cross_origin()
 def get_all_libraries():
-    with CursorFromConnectionFromPool() as cursor:
-        if cursor:
-            print("Connection pool created successfully")
-        cursor.execute('select * from libraryitem')
-        user_data = cursor.fetchall()
-        return {'libraries':user_data}
+    response=all_libraries()
+    return jsonify(response)
 
 
 @app.route('/library-item/<string:userid>', methods=['GET'])
 @cross_origin()
 def get_all_library_by_user_id(userid):
-    with CursorFromConnectionFromPool() as cursor:
-        if cursor:
-            print("Connection pool created successfully")
-        cursor.execute('select * from libraryitem where userid = %s', (userid, ))
-        user_data = cursor.fetchall()
-        library_list = []
-        for i in range(len(user_data)):
-            library_element = { 'libraryitemid':user_data[i][0],
-                'bookcover': user_data[i][3], 'booktitle': user_data[i][2],
-                'bookid': user_data[i][4], 'author': user_data[i][5]
-            }
-            library_list.append(library_element)
-        return {'libraries':library_list}
+    response = all_library_by_id(userid)
+    return jsonify(response)
 
 
 @app.route('/library-item/delete/<string:id>', methods=['DELETE'])
 @cross_origin()
 def delete_library_item_by_id(id):
-    id_list=id.split(',')
-    condition = f'where libraryitemid in ({id_list[0]}'
-    for ids in id_list:
-        condition += f',{ids}'
-    condition += ')'
-    with CursorFromConnectionFromPool() as cursor:
-        if cursor:
-            print("Connection pool created successfully")
-        cursor.execute(f'delete from libraryitem {condition}')
-        return jsonify({"message": "Delete library item success"})
+    response=library_item_deletion(id)
+    return jsonify(response)
 
 
 @app.route('/library-item/add', methods=['POST'])
@@ -321,13 +298,8 @@ def add_library_item():
     author = request.json['author'].replace("'", "''")
     if author is None:
         author = "No Author"
-    with CursorFromConnectionFromPool() as cursor:
-        if cursor:
-            print("Connection pool created successfully")
-        cursor.execute(f"INSERT INTO libraryitem(userid, booktitle, bookcover, bookid, author)  "
-                       f"VALUES(%s, %s, %s, %s, %s)",
-                       (user_id, book_title, book_cover, book_id, author))
-        return {'message': 'Add Library Item Successful'}
+    response=library_item_adding(user_id, book_title, book_cover, book_id, author)
+    return jsonify(response)
 
 
 @app.route('/home/<string:name>', methods=['GET'])
