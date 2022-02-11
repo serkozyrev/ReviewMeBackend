@@ -10,7 +10,8 @@ from database import Database
 from database import CursorFromConnectionFromPool
 from flask_cors import CORS, cross_origin
 import bcrypt
-from wishlist_item import all_wishlist_item, wishlist_item_by_id, wishlist_item_add
+from controllers.wishlist_item import all_wishlist_item, wishlist_item_by_id, wishlist_item_add
+from controllers.user_profile import user_profile_all, profile_by_id,profile_edit
 
 load_dotenv()
 my_email = os.getenv('email')
@@ -93,31 +94,15 @@ def delete_wishlist_by_id(id):
 @app.route('/user-profile', methods=['GET'])
 @cross_origin()
 def get_all_profiles():
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute('SELECT * FROM userdetails ud INNER JOIN usr u ON ud.userid=u.userid AND isActive=true')
-        user_profile = cursor.fetchall()
-        return {'user_profile':user_profile}
+    response = user_profile_all()
+    return jsonify(response)
 
 
 @app.route('/user-profile/<string:userId>', methods=['GET'])
 @cross_origin()
 def get_profile_by_id(userId):
-    with CursorFromConnectionFromPool() as cursor:
-        cursor.execute(f"SELECT * FROM userdetails ud INNER JOIN usr u ON ud.userid=u.userid WHERE ud.userid=%s AND isActive=true", (userId, ))
-        user_profile_byid = cursor.fetchone()
-        year = user_profile_byid[4].strftime('%Y')
-        month = user_profile_byid[4].strftime('%m')
-        day = user_profile_byid[4].strftime('%d')
-        date = f'{year}-{month}-{day}'
-        profile_list = []
-        profile_element={
-            'firstname':user_profile_byid[1], 'lastname':user_profile_byid[2],
-            'nickname': user_profile_byid[3], 'genderid': user_profile_byid[5],
-            'dateofbirth':date, 'email': user_profile_byid[8]
-        }
-        profile_list.append(profile_element)
-        return {'profile': profile_list}
-
+    response = profile_by_id(userId)
+    return jsonify(response)
 
 @app.route('/user-profile/edit', methods=['PUT'])
 @cross_origin()
@@ -129,10 +114,8 @@ def edit_profile():
     if first_name is None or last_name is None or nickname is None or userid is None:
         return {'message': 'Edit profile failed - A field is missing'}
     else:
-        with CursorFromConnectionFromPool() as cursor:
-            cursor.execute(f'UPDATE userdetails SET firstname=%s,lastname=%s,nickname=%s WHERE userid=%s',
-                           (first_name, last_name, nickname, userid))
-            return {'message':'Edit profile successful'}
+        response=profile_edit(first_name, last_name, nickname, userid)
+        return jsonify(response)
 
 
 @app.route('/user-profile/delete', methods=['PUT'])
