@@ -399,6 +399,7 @@ def forgot_password():
             cursor_update.execute(f"UPDATE usr SET password=%s "
                                 f" WHERE email=%s", (hashed_pass, forgot_password_email))
         with smtplib.SMTP("smtp.gmail.com") as connection:
+
             connection.starttls()
             connection.login(user=my_email, password=gmail_password)
             connection.sendmail(
