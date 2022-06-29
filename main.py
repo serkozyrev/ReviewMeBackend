@@ -340,7 +340,6 @@ def login():
     password = request.json['password'].encode('utf8')
 
     with CursorFromConnectionFromPool() as cursor:
-        if cursor:
         cursor.execute('select * from usr where email = %s', (email, ))
         user_data = cursor.fetchone()
         if user_data is None:
