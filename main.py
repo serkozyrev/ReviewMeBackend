@@ -333,7 +333,7 @@ def get_all_books(name, max_results):
     return response.json()
 
 
-@app.route('/auth/login', methods=['GET', 'POST'])
+@app.route('/auth/login', methods=['POST'])
 @cross_origin()
 def login():
     email = request.json['email']
