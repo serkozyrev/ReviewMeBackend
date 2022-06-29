@@ -341,7 +341,6 @@ def login():
 
     with CursorFromConnectionFromPool() as cursor:
         if cursor:
-            print("Connection pool created successfully")
         cursor.execute('select * from usr where email = %s', (email, ))
         user_data = cursor.fetchone()
         if user_data is None:
